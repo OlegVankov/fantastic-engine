@@ -1,8 +1,10 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -12,6 +14,23 @@ import (
 )
 
 func main() {
+
+	var (
+		serverAddr  string
+		accrualAddr string
+	)
+
+	flag.StringVar(&serverAddr, "a", "localhost:8080", "адрес и порт запуска сервиса")
+	flag.StringVar(&accrualAddr, "r", "localhost:34567", "адрес системы расчёта начислений")
+
+	flag.Parse()
+
+	if envRunAddr := os.Getenv("RUN_ADDRESS"); envRunAddr != "" {
+		serverAddr = envRunAddr
+	}
+	if envAccrualAddr := os.Getenv("ACCRUAL_SYSTEM_ADDRESS"); envAccrualAddr != "" {
+		accrualAddr = envAccrualAddr
+	}
 
 	router := chi.NewRouter()
 
@@ -33,7 +52,7 @@ func main() {
 
 	go func() {
 		client := resty.New()
-		url := "http://localhost:34567/api/orders/"
+		url := accrualAddr + "/api/orders/"
 		ball := struct {
 			Order   string  `json:"order"`
 			Status  string  `json:"status"`
@@ -69,6 +88,6 @@ func main() {
 		}
 	}()
 
-	fmt.Println("start server port 8080")
-	http.ListenAndServe(":8080", router)
+	fmt.Println("start server:", serverAddr)
+	http.ListenAndServe(serverAddr, router)
 }
