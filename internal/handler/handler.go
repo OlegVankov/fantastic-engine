@@ -6,11 +6,12 @@ import (
 	"io"
 	"net/http"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
+
+	"github.com/OlegVankov/fantastic-engine/internal/util"
 )
 
 type User struct {
@@ -29,51 +30,11 @@ type Order struct {
 	Uploaded time.Time
 }
 
-type UserClaim struct {
-	jwt.RegisteredClaims
-	Username string
-}
-
 // [login]
 var Users2 = map[string]User{}
 
 // [login]
 var Orders2 = map[string]string{}
-
-func createToken(username string) (string, error) {
-	userClaim := &UserClaim{
-		Username: username,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 24)),
-		},
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, userClaim)
-
-	tokenString, err := token.SignedString([]byte("secret_key"))
-	if err != nil {
-		return "", err
-	}
-
-	return tokenString, nil
-}
-
-func checkLun(num string) bool {
-	sum := 0
-	parity := len(num) % 2
-
-	for i, v := range num {
-		digit, _ := strconv.Atoi(string(v))
-		if i%2 == parity {
-			digit *= 2
-			if digit > 9 {
-				digit = digit%10 + digit/10
-			}
-		}
-		sum += digit
-	}
-
-	return sum%10 == 0
-}
 
 func Register(w http.ResponseWriter, r *http.Request) {
 
@@ -91,7 +52,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tkn, _ := createToken(user.Login)
+	tkn, _ := util.CreateToken(user.Login)
 	authorization := fmt.Sprintf("Bearer %s", tkn)
 
 	user.Token = tkn
@@ -117,7 +78,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tkn, _ := createToken(user.Login)
+	tkn, _ := util.CreateToken(user.Login)
 	authorization := fmt.Sprintf("Bearer %s", tkn)
 
 	user.Token = tkn
@@ -136,7 +97,6 @@ func Orders(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	fmt.Printf("[INFO] method: %s path: %s body: %q\n", r.Method, r.URL.Path, body)
 
 	if r.Header.Get("Content-Type") != "text/plain" {
 		w.WriteHeader(http.StatusBadRequest)
@@ -144,7 +104,7 @@ func Orders(w http.ResponseWriter, r *http.Request) {
 
 	number := string(body)
 
-	if !checkLun(number) {
+	if !util.CheckLun(number) {
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		return
 	}
@@ -162,13 +122,7 @@ func Orders(w http.ResponseWriter, r *http.Request) {
 
 	Orders2[number] = username
 
-	// user := Users2[username]
-	// user.Order = append(user.Order, Order{Number: number, Status: "NEW", Uploaded: time.Now()})
-	// Users2[username] = user
-
 	Users2[username].Order[number] = Order{Number: number, Status: "NEW", Uploaded: time.Now()}
-
-	// fmt.Printf("[INFO] POST /api/user/Orders2 %s %s %v\n", username, number, Users2[username].Order)
 
 	w.WriteHeader(http.StatusAccepted)
 }
@@ -202,7 +156,7 @@ func Withdraw(w http.ResponseWriter, r *http.Request) {
 
 	user := Users2[username]
 
-	if !checkLun(withdraw.Order) {
+	if !util.CheckLun(withdraw.Order) {
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		return
 	}
@@ -252,7 +206,13 @@ func Withdrawals(w http.ResponseWriter, r *http.Request) {
 	withdrawals := []Wd{}
 
 	for _, v := range Users2[username].Order {
-		withdrawals = append(withdrawals, Wd{Order: v.Number, Sum: Users2[username].Withdraw, Proccessed_At: time.Now(), uploaded: v.Uploaded})
+		withdrawals = append(withdrawals,
+			Wd{
+				Order:         v.Number,
+				Sum:           Users2[username].Withdraw,
+				Proccessed_At: time.Now(),
+				uploaded:      v.Uploaded,
+			})
 	}
 
 	sort.Slice(withdrawals, func(i, j int) bool {
@@ -278,9 +238,11 @@ func Auth(h http.Handler) http.Handler {
 			return
 		}
 
-		userClaim := UserClaim{}
+		userClaim := util.UserClaim{}
 
-		token, err := jwt.ParseWithClaims(auth, &userClaim, func(token *jwt.Token) (interface{}, error) { return []byte("secret_key"), nil })
+		token, err := jwt.ParseWithClaims(auth, &userClaim, func(token *jwt.Token) (interface{}, error) {
+			return []byte("secret_key"), nil
+		})
 
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
