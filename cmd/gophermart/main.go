@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-resty/resty/v2"
 
+	"github.com/OlegVankov/fantastic-engine/internal/accrual"
 	"github.com/OlegVankov/fantastic-engine/internal/handler"
 )
 
@@ -50,43 +49,7 @@ func main() {
 		})
 	})
 
-	go func() {
-		client := resty.New()
-		url := accrualAddr + "/api/orders/"
-		ball := struct {
-			Order   string  `json:"order"`
-			Status  string  `json:"status"`
-			Accrual float64 `json:"accrual"`
-		}{}
-		for {
-			for k := range handler.Orders2 {
-				resp, err := client.R().SetResult(&ball).Get(url + k)
-				if err != nil {
-					fmt.Printf("[ERROR] %s\n", err.Error())
-				}
-
-				if resp.StatusCode() == http.StatusOK {
-
-					username := handler.Orders2[ball.Order]
-					user := handler.Users2[username]
-					order := handler.Users2[username].Order[ball.Order]
-					order.Status = ball.Status
-
-					if ball.Status == "PROCESSED" {
-						order.Accrual = ball.Accrual
-						user.Balance += ball.Accrual
-					}
-
-					handler.Users2[username] = user
-					handler.Users2[username].Order[ball.Order] = order
-
-				}
-
-			}
-
-			<-time.After(time.Second)
-		}
-	}()
+	go accrual.SendAccrual(accrualAddr)
 
 	fmt.Println("start server:", serverAddr)
 	http.ListenAndServe(serverAddr, router)
