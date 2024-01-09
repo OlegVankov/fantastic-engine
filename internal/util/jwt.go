@@ -9,11 +9,13 @@ import (
 type UserClaim struct {
 	jwt.RegisteredClaims
 	Username string
+	UserID   uint64
 }
 
-func CreateToken(username string) (string, error) {
+func CreateToken(username string, userid uint64) (string, error) {
 	userClaim := &UserClaim{
 		Username: username,
+		UserID:   userid,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 24)),
 		},

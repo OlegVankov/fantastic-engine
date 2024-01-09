@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -30,11 +31,7 @@ func Auth(h http.Handler) http.Handler {
 		}
 
 		if !token.Valid {
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-
-		if _, ok := Users2[userClaim.Username]; !ok {
+			fmt.Println("token not valid", userClaim.UserID, userClaim.Username)
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
