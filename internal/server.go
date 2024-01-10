@@ -18,7 +18,7 @@ type Server struct {
 
 func NewServer(addr, dsn string) *Server {
 	h := &handler.Handler{
-		postgres.NewUserRepository(dsn),
+		Repository: postgres.NewUserRepository(dsn),
 	}
 
 	router := chi.NewRouter()
