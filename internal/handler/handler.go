@@ -35,7 +35,13 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.Repository.AddUser(context.Background(), c.Login, c.Password)
+	pass, err := util.StringToHash(c.Password)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	user, err := h.Repository.AddUser(context.Background(), c.Login, pass)
 	if err != nil {
 		var e *pgconn.PgError
 		if errors.As(err, &e) && e.Code == "23505" {
@@ -78,7 +84,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if user.Password != c.Password {
+	if !util.CheckPassword(user.Password, c.Password) {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
