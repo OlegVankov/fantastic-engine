@@ -1,7 +1,13 @@
 package internal
 
 import (
+	"context"
+	"errors"
+	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -53,5 +59,23 @@ func NewServer(addr, dsn string) *Server {
 
 func (s *Server) Run(accrualAddr string) {
 	go accrual.SendAccrual(accrualAddr, s.handler)
-	s.srv.ListenAndServe()
+
+	go func() {
+		err := s.srv.ListenAndServe()
+		if !errors.Is(err, http.ErrServerClosed) {
+			log.Fatal("HTTP server ListenAndServe", err)
+		}
+	}()
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
+	sig := <-c
+
+	log.Println("server", "Graceful shutdown starter with signal", sig.String())
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := s.srv.Shutdown(ctx); err != nil {
+		log.Fatal("server", err)
+	}
+	log.Println("server gracefully shutdown complete")
 }

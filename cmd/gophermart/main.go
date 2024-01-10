@@ -19,7 +19,7 @@ func main() {
 
 	flag.StringVar(&serverAddr, "a", "localhost:8080", "адрес и порт запуска сервиса")
 	flag.StringVar(&accrualAddr, "r", "http://localhost:34567", "адрес системы расчёта начислений")
-	flag.StringVar(&databaseURI, "d", "", "адрес подключения к базе данных")
+	flag.StringVar(&databaseURI, "d", "postgresql://postgres:postgres@localhost:5432/gophermart?sslmode=disable", "адрес подключения к базе данных")
 
 	flag.Parse()
 
