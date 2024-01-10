@@ -11,7 +11,7 @@ import (
 	"github.com/OlegVankov/fantastic-engine/internal/handler"
 )
 
-func SendAccrual(addr string) {
+func SendAccrual(addr string, handler *handler.Handler) {
 	client := resty.New()
 	url := addr + "/api/orders/"
 	ball := struct {

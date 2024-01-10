@@ -12,26 +12,19 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/OlegVankov/fantastic-engine/internal/repository"
-	"github.com/OlegVankov/fantastic-engine/internal/repository/postgres"
 	"github.com/OlegVankov/fantastic-engine/internal/util"
 )
+
+type Handler struct {
+	Repository repository.Repository
+}
 
 type credential struct {
 	Login    string `json:"login"`
 	Password string `json:"password"`
 }
 
-var (
-	Repository repository.Repository
-	// = postgres.NewUserRepository("postgresql://postgres:postgres@localhost:5432/gophermart?sslmode=disable")
-)
-
-func SetRepository(dsn string) error {
-	Repository = postgres.NewUserRepository(dsn)
-	return nil
-}
-
-func Register(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 
 	c := credential{}
 
@@ -42,7 +35,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := Repository.AddUser(context.Background(), c.Login, c.Password)
+	user, err := h.Repository.AddUser(context.Background(), c.Login, c.Password)
 	if err != nil {
 		var e *pgconn.PgError
 		if errors.As(err, &e) && e.Code == "23505" {
@@ -65,7 +58,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func Login(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	c := credential{}
 
 	err := json.NewDecoder(r.Body).Decode(&c)
@@ -75,7 +68,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := Repository.GetUser(context.Background(), c.Login)
+	user, err := h.Repository.GetUser(context.Background(), c.Login)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			w.WriteHeader(http.StatusUnauthorized)
@@ -97,7 +90,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func Orders(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Orders(w http.ResponseWriter, r *http.Request) {
 
 	body, err := io.ReadAll(r.Body)
 
@@ -119,12 +112,11 @@ func Orders(w http.ResponseWriter, r *http.Request) {
 
 	username := r.Header.Get("username")
 
-	_, err = Repository.AddOrder(context.Background(), username, number)
+	_, err = h.Repository.AddOrder(context.Background(), username, number)
 	if err != nil {
 		var e *pgconn.PgError
 		if errors.As(err, &e) && e.Code == "23505" {
-			order, err := Repository.GetOrderByNumber(context.Background(), number)
-			// fmt.Printf("username: %s number %s %v\n", username, number, order)
+			order, err := h.Repository.GetOrderByNumber(context.Background(), number)
 			if err == nil {
 				if order.UserLogin == username {
 					w.WriteHeader(http.StatusOK)
@@ -141,10 +133,10 @@ func Orders(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 }
 
-func GetOrders(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetOrders(w http.ResponseWriter, r *http.Request) {
 	username := r.Header.Get("username")
 
-	orders, err := Repository.GetOrdersByLogin(context.Background(), username)
+	orders, err := h.Repository.GetOrdersByLogin(context.Background(), username)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -160,7 +152,7 @@ func GetOrders(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(orders)
 }
 
-func Withdraw(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Withdraw(w http.ResponseWriter, r *http.Request) {
 	username := r.Header.Get("username")
 	withdraw := struct {
 		Order string
@@ -177,7 +169,7 @@ func Withdraw(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = Repository.UpdateWithdraw(context.Background(), username, withdraw.Order, withdraw.Sum)
+	err = h.Repository.UpdateWithdraw(context.Background(), username, withdraw.Order, withdraw.Sum)
 	if err != nil {
 		if err.Error() == "balance error" {
 			w.WriteHeader(http.StatusPaymentRequired)
@@ -191,10 +183,10 @@ func Withdraw(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func Balance(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Balance(w http.ResponseWriter, r *http.Request) {
 	username := r.Header.Get("username")
 
-	user, err := Repository.GetBalance(context.Background(), username)
+	user, err := h.Repository.GetBalance(context.Background(), username)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -213,10 +205,10 @@ func Balance(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(balance)
 }
 
-func Withdrawals(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Withdrawals(w http.ResponseWriter, r *http.Request) {
 	username := r.Header.Get("username")
 
-	wd, err := Repository.GetWithdrawals(r.Context(), username)
+	wd, err := h.Repository.GetWithdrawals(r.Context(), username)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return

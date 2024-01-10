@@ -2,15 +2,11 @@ package main
 
 import (
 	"flag"
-	"log"
-	"net/http"
 	"os"
 
-	"github.com/go-chi/chi/v5"
 	_ "github.com/jackc/pgx/v5/stdlib"
 
-	"github.com/OlegVankov/fantastic-engine/internal/handler"
-	"github.com/OlegVankov/fantastic-engine/internal/handler/accrual"
+	"github.com/OlegVankov/fantastic-engine/internal"
 )
 
 var (
@@ -37,30 +33,6 @@ func main() {
 		databaseURI = envDatabaseURI
 	}
 
-	router := chi.NewRouter()
-
-	router.Route("/api/user", func(r chi.Router) {
-		r.Post("/register", handler.Register)
-		r.Post("/login", handler.Login)
-
-		r.Route("/", func(r chi.Router) {
-			r.Use(handler.Auth)
-
-			r.Post("/orders", handler.Orders)
-			r.Get("/orders", handler.GetOrders)
-
-			r.Post("/balance/withdraw", handler.Withdraw)
-			r.Get("/balance", handler.Balance)
-			r.Get("/withdrawals", handler.Withdrawals)
-		})
-	})
-
-	err := handler.SetRepository(databaseURI)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	go accrual.SendAccrual(accrualAddr)
-
-	http.ListenAndServe(serverAddr, router)
+	server := internal.NewServer(serverAddr, databaseURI)
+	server.Run(accrualAddr)
 }
