@@ -32,10 +32,16 @@ func CreateToken(username string, userid uint64) (string, error) {
 	return tokenString, nil
 }
 
-func GetUser(token string) string {
+func GetUser(tokenString string) string {
 	userClaim := &UserClaim{}
-	jwt.ParseWithClaims(token, userClaim, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenString, userClaim, func(token *jwt.Token) (interface{}, error) {
 		return []byte(secretKey), nil
 	})
+	if err != nil {
+		return ""
+	}
+	if !token.Valid {
+		return ""
+	}
 	return userClaim.Username
 }
