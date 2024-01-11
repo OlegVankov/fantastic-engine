@@ -12,6 +12,8 @@ type UserClaim struct {
 	UserID   uint64
 }
 
+const secretKey = "AsDfGhJkL"
+
 func CreateToken(username string, userid uint64) (string, error) {
 	userClaim := &UserClaim{
 		Username: username,
@@ -22,10 +24,18 @@ func CreateToken(username string, userid uint64) (string, error) {
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, userClaim)
 
-	tokenString, err := token.SignedString([]byte("secret_key"))
+	tokenString, err := token.SignedString([]byte(secretKey))
 	if err != nil {
 		return "", err
 	}
 
 	return tokenString, nil
+}
+
+func GetUser(token string) string {
+	userClaim := &UserClaim{}
+	jwt.ParseWithClaims(token, userClaim, func(token *jwt.Token) (interface{}, error) {
+		return []byte(secretKey), nil
+	})
+	return userClaim.Username
 }
