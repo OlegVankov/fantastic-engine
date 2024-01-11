@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -41,7 +40,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.Repository.AddUser(context.Background(), c.Login, pass)
+	user, err := h.Repository.AddUser(r.Context(), c.Login, pass)
 	if err != nil {
 		var e *pgconn.PgError
 		if errors.As(err, &e) && e.Code == "23505" {
@@ -74,7 +73,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.Repository.GetUser(context.Background(), c.Login)
+	user, err := h.Repository.GetUser(r.Context(), c.Login)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			w.WriteHeader(http.StatusUnauthorized)
@@ -118,11 +117,11 @@ func (h *Handler) Orders(w http.ResponseWriter, r *http.Request) {
 
 	username := r.Header.Get("username")
 
-	_, err = h.Repository.AddOrder(context.Background(), username, number)
+	_, err = h.Repository.AddOrder(r.Context(), username, number)
 	if err != nil {
 		var e *pgconn.PgError
 		if errors.As(err, &e) && e.Code == "23505" {
-			order, err := h.Repository.GetOrderByNumber(context.Background(), number)
+			order, err := h.Repository.GetOrderByNumber(r.Context(), number)
 			if err == nil {
 				if order.UserLogin == username {
 					w.WriteHeader(http.StatusOK)
@@ -142,7 +141,7 @@ func (h *Handler) Orders(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetOrders(w http.ResponseWriter, r *http.Request) {
 	username := r.Header.Get("username")
 
-	orders, err := h.Repository.GetOrdersByLogin(context.Background(), username)
+	orders, err := h.Repository.GetOrdersByLogin(r.Context(), username)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -175,7 +174,7 @@ func (h *Handler) Withdraw(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.Repository.UpdateWithdraw(context.Background(), username, withdraw.Order, withdraw.Sum)
+	err = h.Repository.UpdateWithdraw(r.Context(), username, withdraw.Order, withdraw.Sum)
 	if err != nil {
 		if err.Error() == "balance error" {
 			w.WriteHeader(http.StatusPaymentRequired)
@@ -192,7 +191,7 @@ func (h *Handler) Withdraw(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Balance(w http.ResponseWriter, r *http.Request) {
 	username := r.Header.Get("username")
 
-	user, err := h.Repository.GetBalance(context.Background(), username)
+	user, err := h.Repository.GetBalance(r.Context(), username)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return

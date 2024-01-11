@@ -12,6 +12,7 @@ import (
 )
 
 func SendAccrual(addr string, handler *handler.Handler) {
+	ctx := context.Background()
 	client := resty.New()
 	url := addr + "/api/orders/"
 	ball := struct {
@@ -21,7 +22,7 @@ func SendAccrual(addr string, handler *handler.Handler) {
 	}{}
 	for {
 
-		orders, err := handler.Repository.GetOrders(context.Background())
+		orders, err := handler.Repository.GetOrders(ctx)
 		if err != nil {
 			continue
 		}
@@ -37,7 +38,7 @@ func SendAccrual(addr string, handler *handler.Handler) {
 
 			if resp.StatusCode() == http.StatusOK && ball.Status == "PROCESSED" {
 
-				err := handler.Repository.UpdateOrder(context.Background(), ball.Order, ball.Status, ball.Accrual)
+				err := handler.Repository.UpdateOrder(ctx, ball.Order, ball.Status, ball.Accrual)
 				if err != nil {
 					fmt.Printf("[ERROR] %s\n", err.Error())
 					continue
