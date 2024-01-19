@@ -23,6 +23,7 @@ func SendAccrual(addr string, handler *handler.Handler) {
 	for {
 
 		orders, err := handler.Repository.GetOrders(ctx)
+
 		if err != nil {
 			continue
 		}
@@ -36,7 +37,7 @@ func SendAccrual(addr string, handler *handler.Handler) {
 				fmt.Printf("[ERROR] %s\n", err.Error())
 			}
 
-			if resp.StatusCode() == http.StatusOK && ball.Status == "PROCESSED" {
+			if resp.StatusCode() == http.StatusOK {
 
 				err := handler.Repository.UpdateOrder(ctx, ball.Order, ball.Status, ball.Accrual)
 				if err != nil {

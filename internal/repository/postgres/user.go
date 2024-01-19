@@ -213,7 +213,7 @@ func (r *UserRepository) GetBalance(ctx context.Context, username string) (*mode
 
 func (r *UserRepository) GetOrders(ctx context.Context) ([]model.Order, error) {
 	orders := []model.Order{}
-	err := r.db.SelectContext(ctx, &orders, "select * from orders")
+	err := r.db.SelectContext(ctx, &orders, "select * from orders where status = 'NEW'")
 	if err != nil {
 		return nil, err
 	}
