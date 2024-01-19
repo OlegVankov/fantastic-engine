@@ -11,6 +11,19 @@ import (
 	"github.com/OlegVankov/fantastic-engine/internal/handler"
 )
 
+func sleep(ctx context.Context, interval time.Duration) error {
+	timer := time.NewTimer(interval)
+	select {
+	case <-ctx.Done():
+		if !timer.Stop() {
+			<-timer.C
+		}
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
+}
+
 func SendAccrual(addr string, handler *handler.Handler) {
 	ctx := context.Background()
 	client := resty.New()
@@ -49,6 +62,8 @@ func SendAccrual(addr string, handler *handler.Handler) {
 
 		}
 
-		<-time.After(time.Second * time.Duration(5))
+		if err := sleep(ctx, time.Duration(5)*time.Second); err != nil {
+			fmt.Printf("[ERROR] %s\n", err.Error())
+		}
 	}
 }
