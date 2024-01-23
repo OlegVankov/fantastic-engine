@@ -24,7 +24,7 @@ func SendAccrual(addr string, handler *handler.Handler) {
 	timer := time.NewTimer(time.Duration(5) * time.Second)
 	defer timer.Stop()
 
-	for _ = range timer.C {
+	for range timer.C {
 
 		orders, err := handler.Repository.GetOrders(ctx)
 
