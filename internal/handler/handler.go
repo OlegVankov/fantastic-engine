@@ -11,7 +11,9 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/OlegVankov/fantastic-engine/internal/repository"
-	"github.com/OlegVankov/fantastic-engine/internal/util"
+	"github.com/OlegVankov/fantastic-engine/internal/util/hash"
+	"github.com/OlegVankov/fantastic-engine/internal/util/jwt"
+	"github.com/OlegVankov/fantastic-engine/internal/util/lun"
 )
 
 type Handler struct {
@@ -34,7 +36,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pass, err := util.StringToHash(c.Password)
+	pass, err := hash.StringToHash(c.Password)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -52,7 +54,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tkn, err := util.CreateToken(user.Login, user.ID)
+	tkn, err := jwt.CreateToken(user.Login, user.ID)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -83,12 +85,17 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !util.CheckPassword(user.Password, c.Password) {
+	if !hash.CheckPassword(user.Password, c.Password) {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
-	tkn, _ := util.CreateToken(user.Login, user.ID)
+	tkn, err := jwt.CreateToken(user.Login, user.ID)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	authorization := fmt.Sprintf("Bearer %s", tkn)
 
 	w.Header().Add("Authorization", authorization)
@@ -110,7 +117,7 @@ func (h *Handler) Orders(w http.ResponseWriter, r *http.Request) {
 
 	number := string(body)
 
-	if !util.CheckLun(number) {
+	if !lun.CheckLun(number) {
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		return
 	}
@@ -169,7 +176,7 @@ func (h *Handler) Withdraw(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !util.CheckLun(withdraw.Order) {
+	if !lun.CheckLun(withdraw.Order) {
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		return
 	}

@@ -4,13 +4,13 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/OlegVankov/fantastic-engine/internal/util"
+	"github.com/OlegVankov/fantastic-engine/internal/util/jwt"
 )
 
 func Auth(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-		username := util.GetUser(token)
+		username := jwt.GetUser(token)
 		if username == "" {
 			w.WriteHeader(http.StatusUnauthorized)
 			return

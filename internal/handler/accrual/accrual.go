@@ -11,19 +11,6 @@ import (
 	"github.com/OlegVankov/fantastic-engine/internal/handler"
 )
 
-func sleep(ctx context.Context, interval time.Duration) error {
-	timer := time.NewTimer(interval)
-	select {
-	case <-ctx.Done():
-		if !timer.Stop() {
-			<-timer.C
-		}
-		return ctx.Err()
-	case <-timer.C:
-		return nil
-	}
-}
-
 func SendAccrual(addr string, handler *handler.Handler) {
 	ctx := context.Background()
 	client := resty.New()
@@ -33,7 +20,11 @@ func SendAccrual(addr string, handler *handler.Handler) {
 		Status  string  `json:"status"`
 		Accrual float64 `json:"accrual"`
 	}{}
-	for {
+
+	timer := time.NewTimer(time.Duration(5) * time.Second)
+	defer timer.Stop()
+
+	for _ = range timer.C {
 
 		orders, err := handler.Repository.GetOrders(ctx)
 
@@ -62,8 +53,5 @@ func SendAccrual(addr string, handler *handler.Handler) {
 
 		}
 
-		if err := sleep(ctx, time.Duration(5)*time.Second); err != nil {
-			fmt.Printf("[ERROR] %s\n", err.Error())
-		}
 	}
 }
